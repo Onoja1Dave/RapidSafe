@@ -1,16 +1,14 @@
-// app/duress-decoy.jsx
-
 import { MaterialIcons } from "@expo/vector-icons"; // You'll need to install this package if you haven't
 import { Stack } from "expo-router";
 import { useState } from "react";
 import {
-    Alert,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function DuressDecoyScreen() {
   const [displayNumber, setDisplayNumber] = useState("");
@@ -18,21 +16,17 @@ export default function DuressDecoyScreen() {
   // Function to handle number and symbol presses
   const handlePress = (key) => {
     if (key === "delete") {
-      // Delete the last character
       setDisplayNumber(displayNumber.slice(0, -1));
     } else if (key === "call") {
-      // Decoy action: show a failed call attempt
       Alert.alert(
         "Call Failed",
         "The number you dialed could not be connected. Try again later."
       );
     } else {
-      // Append the number or symbol
       setDisplayNumber(displayNumber + key);
     }
   };
 
-  // Define the structure of the dialer keys
   const dialerKeys = [
     { main: "1", sub: null, key: "1" },
     { main: "2", sub: "A B C", key: "2" },
@@ -157,7 +151,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   actionPlaceholder: {
-    width: 60, // Sizing to align the call button centrally
+    width: 60,
   },
   callButton: {
     width: 65,

@@ -1,121 +1,122 @@
-// app/(protected)/history.jsx
+// app/(app)/history.jsx
 
 import { Ionicons } from "@expo/vector-icons";
 import { Stack } from "expo-router";
 import { useState } from "react";
 import {
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  FlatList,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useSettings } from "../../context/SettingsContext";
 
-// Mapping category names to colors
+import { useSettings } from "../context/SettingsContext";
+
+// Mapping category names to colors for the indicator
 const CATEGORY_COLORS = {
   "Personal Safety": "#FF3B30",
   "Medical Emergency": "#007AFF",
-  "Fire / Hazard": "#FF9500",
+  "Fire / Hazard": "#FBC02D",
   "Accident / Crime": "#333333",
 };
 
-const StatusChip = ({ status }) => {
-  const isSent = status === "Sent" || status === "Delivered";
-  return (
-    <View style={[styles.chip, { backgroundColor: isSent ? "#E6F4EA" : "#FEF2F2" }]}>
-      <Text style={[styles.chipText, { color: isSent ? "#34C759" : "#FF3B30" }]}>
-        {status || "Sent"}
-      </Text>
-    </View>
-  );
-};
-
-const TimelineItem = ({ item, isLast }) => {
+const AlertLogItem = ({ item }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const date = new Date(item.timestamp);
-  
-  const timeString = date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-  const dateString = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  
+
+  // 🎯 Use item.timestamp (from our context) instead of item.date
+  const formattedDate = new Date(item.timestamp).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  // Determine indicator color based on type
   const indicatorColor = CATEGORY_COLORS[item.type] || "#8E8E93";
 
   return (
-    <View style={styles.timelineRow}>
-      {/* Time Column */}
-      <View style={styles.timeColumn}>
-        <Text style={styles.timeText}>{timeString}</Text>
-        <Text style={styles.dateLabel}>{dateString}</Text>
-      </View>
-
-      {/* Timeline Line & Dot */}
-      <View style={styles.lineWrapper}>
-        <View style={[styles.dot, { backgroundColor: indicatorColor }]} />
-        {!isLast && <View style={styles.line} />}
-      </View>
-
-      {/* Card Content */}
-      <TouchableOpacity 
-        style={styles.cardContainer} 
-        activeOpacity={0.9}
+    <View style={logStyles.itemWrapper}>
+      <TouchableOpacity
+        style={logStyles.itemContainer}
         onPress={() => setIsExpanded(!isExpanded)}
       >
-        <View style={styles.cardHeader}>
-           <Text style={styles.cardTitle}>{item.type}</Text>
-           <StatusChip status={item.status} />
-        </View>
-        
-        <Text style={styles.description} numberOfLines={isExpanded ? 0 : 2}>
-           {item.description || "No specific details provided."}
-        </Text>
-        
-        {isExpanded && (
-          <View style={styles.expandedContent}>
-             <View style={styles.divider} />
-             <Text style={styles.detailLabel}>Recipients:</Text>
-             <Text style={styles.detailValue}>
-               {Array.isArray(item.recipients) ? item.recipients.join(", ") : item.recipients}
-             </Text>
+        {/* Left Indicator */}
+        <View
+          style={[logStyles.typeIndicator, { backgroundColor: indicatorColor }]}
+        />
+
+        {/* Content */}
+        <View style={logStyles.content}>
+          <View style={logStyles.header}>
+            <Text style={logStyles.typeText}>{item.type}</Text>
+            <Text style={logStyles.dateText}>{formattedDate}</Text>
           </View>
-        )}
+          <Text style={logStyles.summaryText} numberOfLines={1}>
+            {item.description || "No details provided."}
+          </Text>
+          <Text style={logStyles.statusText}>
+            Status:{" "}
+            <Text style={{ fontWeight: "600", color: "#34C759" }}>
+              {item.status || "Sent"}
+            </Text>
+          </Text>
+        </View>
+
+        <Ionicons
+          name={isExpanded ? "chevron-up" : "chevron-down"}
+          size={20}
+          color="#C7C7CC"
+        />
       </TouchableOpacity>
+
+      {/* Expanded Details Section */}
+      {isExpanded && (
+        <View style={logStyles.expandedDetail}>
+          <Text style={logStyles.detailLabel}>Recipients:</Text>
+          <Text style={logStyles.detailValue}>
+            {/* 🎯 Handle both array and single string recipients */}
+            {Array.isArray(item.recipients)
+              ? item.recipients.join(", ")
+              : item.recipients}
+          </Text>
+
+          <Text style={logStyles.detailLabel}>Full Description:</Text>
+          <Text style={logStyles.detailValue}>{item.description}</Text>
+        </View>
+      )}
     </View>
   );
 };
 
 export default function HistoryScreen() {
+  // 🎯 1. Get real data from SettingsContext
   const { settings } = useSettings();
   const historyData = settings?.history || [];
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Stack.Screen options={{ title: "Alert History", headerShown: false }} />
+      <Stack.Screen options={{ title: "Alert History" }} />
 
       <View style={styles.header}>
-        <Text style={styles.title}>History</Text>
-        <TouchableOpacity style={styles.filterBtn}>
-           <Ionicons name="filter" size={20} color="#007AFF" />
-        </TouchableOpacity>
+        <Text style={styles.title}>Your Alert Log</Text>
+        <Text style={styles.subtitle}>
+          Review all past emergency and test alerts.
+        </Text>
       </View>
 
       <FlatList
+        // 🎯 2. Use the context data here
         data={historyData}
         keyExtractor={(item) => item.id}
+        renderItem={({ item }) => <AlertLogItem item={item} />}
         contentContainerStyle={styles.listContent}
-        renderItem={({ item, index }) => (
-          <TimelineItem 
-            item={item} 
-            isLast={index === historyData.length - 1} 
-          />
-        )}
         ListEmptyComponent={() => (
           <View style={styles.emptyContainer}>
-            <View style={styles.emptyIconCircle}>
-               <Ionicons name="time-outline" size={48} color="#A0AEC0" />
-            </View>
-            <Text style={styles.emptyTitle}>No Alerts Yet</Text>
-            <Text style={styles.emptyText}>Any alerts you send will appear here.</Text>
+            <Ionicons name="alert-circle-outline" size={50} color="#8E8E93" />
+            <Text style={styles.emptyText}>No alerts recorded yet.</Text>
           </View>
         )}
       />
@@ -123,58 +124,114 @@ export default function HistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#F7FAFC" },
-  header: {
-    paddingHorizontal: 24,
-    paddingVertical: 15,
+// --- KEEP YOUR STYLES EXACTLY AS THEY WERE ---
+const logStyles = StyleSheet.create({
+  itemWrapper: {
     backgroundColor: "#fff",
+    borderRadius: 8,
+    marginBottom: 10,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
+  },
+  itemContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 15,
+  },
+  typeIndicator: {
+    width: 6,
+    height: "100%",
+    borderRadius: 3,
+    marginRight: 10,
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+  },
+  content: {
+    flex: 1,
+    paddingRight: 15,
+    paddingLeft: 10,
+  },
+  header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F2F2F7",
+    marginBottom: 2,
   },
-  title: { fontSize: 28, fontWeight: "800", color: "#1A202C" },
-  filterBtn: { padding: 8, backgroundColor: "#F2F2F7", borderRadius: 8 },
-  listContent: { padding: 20 },
-  
-  // Timeline Styles
-  timelineRow: { flexDirection: "row", marginBottom: 20 },
-  timeColumn: { width: 60,  alignItems: "flex-end", marginRight: 15, paddingTop: 2 },
-  timeText: { fontSize: 13, fontWeight: "700", color: "#2D3748" },
-  dateLabel: { fontSize: 11, color: "#A0AEC0", marginTop: 2 },
-  
-  lineWrapper: { alignItems: "center", width: 20 },
-  dot: { width: 12, height: 12, borderRadius: 6, zIndex: 2, borderWidth: 2, borderColor: "#fff" },
-  line: { width: 2, flex: 1, backgroundColor: "#E2E8F0", marginTop: -2,  marginBottom: -20 },
-  
-  cardContainer: {
-    flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    marginLeft: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 5,
-    elevation: 2,
+  typeText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#333",
   },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  cardTitle: { fontSize: 16, fontWeight: "700", color: "#2D3748" },
-  description: { fontSize: 14, color: "#718096", lineHeight: 20 },
-  
-  chip: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  chipText: { fontSize: 11, fontWeight: "700" },
-  
-  divider: { height: 1, backgroundColor: "#F2F2F7", marginVertical: 12 },
-  expandedContent: { marginTop: 5 },
-  detailLabel: { fontSize: 12, fontWeight: "600", color: "#A0AEC0", marginBottom: 4 },
-  detailValue: { fontSize: 14, color: "#4A5568" },
+  dateText: {
+    fontSize: 12,
+    color: "#8E8E93",
+  },
+  summaryText: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 4,
+  },
+  statusText: {
+    fontSize: 12,
+    color: "#8E8E93",
+  },
+  expandedDetail: {
+    borderTopWidth: 1,
+    borderTopColor: "#F2F2F7",
+    padding: 15,
+  },
+  detailLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#8E8E93",
+    marginTop: 8,
+    marginBottom: 2,
+  },
+  detailValue: {
+    fontSize: 14,
+    color: "#333",
+  },
+});
 
-  emptyContainer: { alignItems: "center", marginTop: 60 },
-  emptyIconCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: "#EDF2F7", justifyContent: "center", alignItems: "center", marginBottom: 15 },
-  emptyTitle: { fontSize: 18, fontWeight: "700", color: "#2D3748", marginBottom: 5 },
-  emptyText: { fontSize: 14, color: "#A0AEC0" },
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#F2F2F7",
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 20,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E5EA",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#1a1a1a",
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 5,
+  },
+  listContent: {
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    padding: 50,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    marginTop: 20,
+  },
+  emptyText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#8E8E93",
+  },
 });
